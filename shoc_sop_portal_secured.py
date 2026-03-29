@@ -187,7 +187,7 @@ def build_repository() -> List[SOPEntry]:
 
     templates_map = {}
     if TEMPLATES_DIR.exists():
-        for p in TEMPLATES_DIR.iterdir():
+        for p in TEMPLPLATES_DIR.iterdir():
             if p.is_dir():
                 templates_map[normalize_name(p.name)] = p
 
@@ -317,46 +317,19 @@ def render_file_card(file_item: FileItem, key_prefix: str) -> None:
 
 
 # =========================================================
-# SECURITY
+# SIMPLE PASSWORD SECURITY (FOR STREAMLIT CLOUD)
 # =========================================================
-def login_button() -> None:
-    st.button("Sign in", on_click=st.login, use_container_width=True)
-
-
-def logout_button() -> None:
-    st.button("Sign out", on_click=st.logout, use_container_width=True)
-
-
-def get_current_email() -> str:
-    email = ""
-    try:
-        if st.user.is_logged_in:
-            email = (getattr(st.user, "email", "") or "").strip().lower()
-    except Exception:
-        email = ""
-    return email
-
-
-def require_login_and_authorization() -> None:
-    render_header_band()
-
-    if not st.user.is_logged_in:
-        st.markdown("### Secure member access")
-        st.info("Please sign in with your approved account to access the SHOC SOP Portal.")
-        login_button()
+def password_gate() -> None:
+    st.markdown("### Secure Access")
+    st.info("This SHOC SOP Portal is protected. Please enter the access password.")
+    password = st.text_input("Access password", type="password")
+    if not password:
         st.stop()
-
-    email = get_current_email()
-    allowed_domain = str(st.secrets.get("ALLOWED_DOMAIN", "")).strip().lower()
-    allowed_users = [str(x).strip().lower() for x in st.secrets.get("ALLOWED_USERS", [])]
-
-    domain_ok = bool(allowed_domain and email.endswith("@" + allowed_domain))
-    user_ok = email in allowed_users
-
-    if not (domain_ok or user_ok):
-        st.error("Access denied. Your account is not authorised for this SHOC portal.")
-        st.write(f"Signed in as: {email or 'Unknown user'}")
-        logout_button()
+    if "APP_PASSWORD" not in st.secrets:
+        st.error("APP_PASSWORD is not configured in Streamlit secrets.")
+        st.stop()
+    if password != st.secrets["APP_PASSWORD"]:
+        st.error("Incorrect password.")
         st.stop()
 
 
@@ -711,7 +684,9 @@ def main() -> None:
     st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
     apply_custom_css()
     init_state()
-    require_login_and_authorization()
+
+    # 🔐 Password protection for Streamlit Cloud
+    password_gate()
 
     repo = build_repository()
 
@@ -719,8 +694,7 @@ def main() -> None:
         st.title(APP_TITLE)
         st.caption(APP_SUBTITLE)
         st.write(f"Base folder: `{BASE_DIR}`")
-        st.write(f"Signed in as: {get_current_email() or 'Unknown user'}")
-        logout_button()
+        st.write("Access: password-protected portal")
 
         if DEBUG_MODE:
             st.write("DEBUG MAIN_DIR exists:", MAIN_DIR.exists())
