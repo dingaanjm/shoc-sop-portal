@@ -30,6 +30,22 @@ ALLOWED_EXTENSIONS = {".docx", ".pdf", ".xlsx", ".doc", ".xls"}
 DOCX_PREVIEW_PARAGRAPHS = 60
 PDF_PREVIEW_HEIGHT = 700
 
+# =========================================================
+# FIXED SHOC SOP ORDER
+# =========================================================
+FIXED_ORDER = [
+    "SOP Governance Finance and Audit",
+    "SOP Multi_Hazard Early Warning and Monitoring",
+    "SOP Emergency Telecommunications",
+    "SOP Emergency Response Teams",
+    "SOPs Human Resources",
+    "SOP Information Communication and Technology",
+    "SOP Access Security and Assett Management",
+    "SOP Supply Management and Logistics",
+    "SOP Business Continuity Management",
+    "SOP Training Manual",
+]
+
 
 # =========================================================
 # DATA MODELS
@@ -146,10 +162,16 @@ def build_repository() -> List[SOPEntry]:
             if p.is_dir():
                 template_map[normalize(p.name)] = p
 
-    for sop_folder in sorted([p for p in MAIN_DIR.iterdir() if p.is_dir()], key=lambda x: x.name.lower()):
-        if sop_folder.name.lower() == "toolkit":
-            continue
+    # Collect SOP folders (excluding Toolkit)
+    folders = [p for p in MAIN_DIR.iterdir() if p.is_dir() and p.name.lower() != "toolkit"]
 
+    # Sort using fixed SHOC order
+    folders_sorted = sorted(
+        folders,
+        key=lambda p: FIXED_ORDER.index(p.name) if p.name in FIXED_ORDER else 999
+    )
+
+    for sop_folder in folders_sorted:
         sop_name = sop_folder.name
         files = list_files(sop_folder)
         main_word, main_pdf, annexes = classify_main_files(sop_name, files)
